@@ -1,1 +1,0 @@
-# ollama-vs-code-extension
