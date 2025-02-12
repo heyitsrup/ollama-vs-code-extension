@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import * as path from 'path';
 import ollama from 'ollama';
 
 export function activate(context: vscode.ExtensionContext) {
@@ -13,7 +14,7 @@ export function activate(context: vscode.ExtensionContext) {
 			{ enableScripts: true }
 		)
 
-		panel.webview.html = getWebviewContent();
+		panel.webview.html = getWebviewContent(context);
 
 		panel.webview.onDidReceiveMessage(async (message: any) => {
 			if (message.command === 'chat') {
@@ -50,7 +51,15 @@ export function activate(context: vscode.ExtensionContext) {
 	context.subscriptions.push(disposable);
 }
 
-function getWebviewContent(): string {
+function getWebviewContent(context: vscode.ExtensionContext): string {
+	// Get the path to the external CSS and JS files
+    const stylesUri = vscode.Uri.file(path.join(context.extensionPath, 'media', 'styles.css'));
+    const scriptUri = vscode.Uri.file(path.join(context.extensionPath, 'media', 'scripts.js'));
+
+    // Convert to webview URI
+    const stylesUriWebview = stylesUri.with({ scheme: 'vscode-resource' });
+    const scriptUriWebview = scriptUri.with({ scheme: 'vscode-resource' });
+
 	return /*html*/`
 	<!DOCTYPE html>
 	<html lang="en">
@@ -58,42 +67,28 @@ function getWebviewContent(): string {
 		<meta charset="UTF-8">
 		<meta name="viewport" content="width=device-width, initial-scale=1.0">
 		<title>Deepseek Assistant</title>
-		<script src="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.js"></script>
+		<link rel="stylesheet" href="${stylesUriWebview}">
 	</head>
-	<body class="bg-gray-100 flex items-center justify-center h-screen">
+	<body>
 
-		<div class="bg-white p-8 rounded-lg shadow-lg max-w-sm w-full">
+		<div class="container">
 			<!-- Title -->
-			<h1 class="text-2xl font-semibold text-center text-gray-800 mb-6">Deepseek Assistant</h1>
+			<h1>Deepseek Assistant</h1>
 
 			<!-- Text Area -->
-			<textarea id="prompt" class="w-full h-40 p-4 border border-gray-300 rounded-lg mb-4" placeholder="Type your query here..."></textarea>
+			<textarea id="prompt" placeholder="Type your query here..."></textarea><br>
 
 			<!-- Button -->
-			<button id="askBtn" class="w-full bg-blue-500 text-white py-2 rounded-lg hover:bg-blue-600 transition duration-200">Submit</button>
+			<button id="askBtn">Submit</button>
 
 			<div id="response"></div>
 		</div>
 
-		<script>
-			const vscode = acquireVsCodeApi();
-
-			document.getElementById('askBtn').addEventListener('click', () => {
-				const text = document.getElementById('prompt').value;
-				vscode.postMessage({ command: 'chat', text})
-			});
-
-			window.addEventListener('message', event => {
-				const { command, text } = event.data;
-				if (command === 'chatResponse') {
-					document.getElementById('response').innerText = text;
-				}
-			})
-		</script>
+		<script src="${scriptUriWebview}"></script>
 
 	</body>
 	</html>
-	`
+	`;
 }
 
 export function deactivate() { }
