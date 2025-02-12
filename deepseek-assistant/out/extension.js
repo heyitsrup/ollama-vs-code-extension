@@ -39,7 +39,6 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.activate = activate;
 exports.deactivate = deactivate;
 const vscode = __importStar(require("vscode"));
-const path = __importStar(require("path"));
 const ollama_1 = __importDefault(require("ollama"));
 function activate(context) {
     console.log('Congratulations, your extension "deepseek-assistant" is now active!');
@@ -79,12 +78,6 @@ function activate(context) {
     context.subscriptions.push(disposable);
 }
 function getWebviewContent(context) {
-    // Get the path to the external CSS and JS files
-    const stylesUri = vscode.Uri.file(path.join(context.extensionPath, 'media', 'styles.css'));
-    const scriptUri = vscode.Uri.file(path.join(context.extensionPath, 'media', 'scripts.js'));
-    // Convert to webview URI
-    const stylesUriWebview = stylesUri.with({ scheme: 'vscode-resource' });
-    const scriptUriWebview = scriptUri.with({ scheme: 'vscode-resource' });
     return /*html*/ `
 	<!DOCTYPE html>
 	<html lang="en">
@@ -92,7 +85,62 @@ function getWebviewContent(context) {
 		<meta charset="UTF-8">
 		<meta name="viewport" content="width=device-width, initial-scale=1.0">
 		<title>Deepseek Assistant</title>
-		<link rel="stylesheet" href="${stylesUriWebview}">
+		<style>
+			body {
+				background-color: #f3f4f6;
+				display: flex;
+				align-items: center;
+				justify-content: center;
+				height: 100vh;
+				margin: 0;
+			}
+
+			.container {
+				background-color: white;
+				padding: 2rem;
+				border-radius: 0.5rem;
+				box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+				max-width: 24rem;
+				width: 100%;
+				text-align: center;
+			}
+
+			h1 {
+				font-size: 1.5rem;
+				font-weight: 600;
+				color: #1f2937;
+				margin-bottom: 1.5rem;
+			}
+
+			textarea {
+				width: 100%;
+				height: 10rem;
+				padding: 1rem;
+				border: 1px solid #d1d5db;
+				border-radius: 0.5rem;
+				margin-bottom: 1rem;
+				resize: none;
+			}
+
+			button {
+				width: 100%;
+				background-color: #3b82f6;
+				color: white;
+				padding: 0.5rem;
+				border: none;
+				border-radius: 0.5rem;
+				cursor: pointer;
+				transition: background-color 0.2s;
+			}
+
+			button:hover {
+				background-color: #2563eb;
+			}
+
+			#response {
+				margin-top: 1rem;
+			}
+    	</style>
 	</head>
 	<body>
 
@@ -109,7 +157,21 @@ function getWebviewContent(context) {
 			<div id="response"></div>
 		</div>
 
-		<script src="${scriptUriWebview}"></script>
+		<script>
+			const vscode = acquireVsCodeApi();
+
+			document.getElementById('askBtn').addEventListener('click', () => {
+				const text = document.getElementById('prompt').value;
+				vscode.postMessage({ command: 'chat', text})
+			});
+
+			window.addEventListener('message', event => {
+				const { command, text } = event.data;
+				if (command === 'chatResponse') {
+					document.getElementById('response').innerText = text;
+				}
+			})
+		</script>
 
 	</body>
 	</html>
